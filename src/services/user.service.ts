@@ -10,9 +10,7 @@ export default class UserService {
   }
 
   async create(_user: TUser): Promise<TUser> {
-    const { email, password } = _user;
-
-    const user = new UserFactory(email, password).getUser();
+    const user = new UserFactory(_user).getUser();
 
     return this.userRepository.create(user);
   }

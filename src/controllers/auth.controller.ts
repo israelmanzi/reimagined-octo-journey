@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import AuthService from '../services/auth.service';
 import UserService from '../services/user.service';
 import { Response as R } from '../utils';
+import { TUser } from '../db/types';
 
 const authService: AuthService = new AuthService();
 const userService: UserService = new UserService();
@@ -26,12 +27,9 @@ export const AuthController = {
   },
 
   create: async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+    const body = req.body as TUser;
 
-    const user = await userService.create({
-      email,
-      password,
-    });
+    const user = await userService.create(body);
 
     new R('created', user).sendResponse();
   },

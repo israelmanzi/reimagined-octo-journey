@@ -9,7 +9,7 @@ export type TUser = {
   role: TUserRole;
   device?: TDevice;
   userStatus: TUserStatus[];
-  dateOfBirth: Date;
+  dateOfBirth: string;
   phoneNumber: string;
   idNumber?: string;
   refreshToken?: string;
@@ -21,17 +21,17 @@ export type TUser = {
 
 export type TDevice = {
     id?: string;
-    issuedAt: Date;
+    issuedAt: string;
     userId: string;
     insurance: TInsurance;
     deviceStatus: TDeviceStatusType;
-    lastActive: Date;
+    lastActive: string;
     deviceModel: TDeviceModel;
 };
 
 export type TInsurance = {
     name: string;
-    expirationDate: Date;
+    expirationDate: string;
 };
 
 export type TUserStatus = {
@@ -56,8 +56,8 @@ export type TDeviceStatusType = 'active' | 'inactive' | 'lost' | 'stolen';
 export type TDeviceModel = {
     name: string;
     manufacturer: string;
-    releaseDate: Date;
-    lastUpdate: Date;
+    releaseDate: string;
+    lastUpdate: string;
     price: number;
 };
 

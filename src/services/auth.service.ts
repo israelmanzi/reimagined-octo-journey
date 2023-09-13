@@ -58,7 +58,7 @@ export default class AuthService {
 
     const passwordCompare: boolean = await compare(password, user.password);
 
-    if (!passwordCompare) throw new HttpsError('unauthenticated', 'Invalid password!');
+    if (!passwordCompare) throw new HttpsError('unauthenticated', 'Invalid email or password!');
 
     return await this.generateAuthToken({
       userId: user.id!,

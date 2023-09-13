@@ -2,6 +2,7 @@ import { v4 } from 'uuid';
 import { HttpsError } from '../../utils';
 import { hash, genSalt } from 'bcrypt';
 import { TDevice, TGender, TUser, TUserRole, TUserStatus } from '../types';
+import { DateFactory } from './device';
 
 class EmailFactory {
   private readonly email: string;
@@ -12,7 +13,7 @@ class EmailFactory {
       throw new HttpsError('invalid-argument', 'Invalid email');
     }
 
-    if (_email.length > 5 || _email.length < 20) {
+    if (_email.length < 5 || _email.length > 20) {
       throw new HttpsError('invalid-argument', 'Email must be between 5 and 20 characters');
     }
 
@@ -75,10 +76,10 @@ export class PhoneNumber {
 
 export class IdNumber {
   private readonly idNumber: string;
-  regex: RegExp = /^[0-16]+$/;
+  regex: RegExp = /^[0-9]+$/;
 
   constructor(_idNumber: string) {
-    if (_idNumber.length !== 13 || !this.regex.test(_idNumber)) {
+    if (_idNumber.length !== 16 || !this.regex.test(_idNumber)) {
       throw new HttpsError('invalid-argument', 'ID number must be valid');
     }
 
@@ -87,25 +88,6 @@ export class IdNumber {
 
   public getIdNumber(): string {
     return this.idNumber;
-  }
-}
-
-export class DateOfBirth {
-  private readonly dateOfBirth: Date;
-
-  constructor(_dateOfBirth: Date) {
-    const today = new Date();
-    const birthDate = new Date(_dateOfBirth);
-
-    if (today.getFullYear() - birthDate.getFullYear() < 6) {
-      throw new HttpsError('invalid-argument', 'User must be 6 years or older');
-    }
-
-    this.dateOfBirth = _dateOfBirth;
-  }
-
-  public getDateOfBirth(): Date {
-    return this.dateOfBirth;
   }
 }
 
@@ -206,44 +188,54 @@ export default class UserFactory {
   private readonly role: TUserRole;
   private readonly device?: TDevice;
   private readonly userStatus: TUserStatus[];
-  private readonly dateOfBirth: Date;
+  private readonly dateOfBirth: string;
   private readonly phoneNumber: string;
   private readonly idNumber?: string;
   private readonly password: string;
 
-  constructor(
-    _email: string,
-    _password: string,
-    _firstName: string,
-    _lastName: string,
-    _location: string,
-    _gender: TGender,
-    _role: TUserRole,
-    _device: TDevice,
-    _userStatus: TUserStatus[],
-    _dateOfBirth: Date,
-    _phoneNumber: string,
-    _idNumber: string,
-  ) {
+  constructor({
+    email,
+    password,
+    firstName,
+    lastName,
+    location,
+    gender,
+    role,
+    userStatus,
+    dateOfBirth,
+    phoneNumber,
+    idNumber,
+  }: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    location: string;
+    gender: TGender;
+    role: TUserRole;
+    userStatus: TUserStatus[];
+    dateOfBirth: string;
+    phoneNumber: string;
+    idNumber?: string;
+  }) {
     this.id = v4();
-    this.email = new EmailFactory(_email).getEmail();
+    this.email = new EmailFactory(email).getEmail();
 
-    this.firstName = new Name(_firstName).getName();
-    this.lastName = new Name(_lastName).getName();
-    this.location = new Location(_location).getLocation();
+    this.firstName = new Name(firstName).getName();
+    this.lastName = new Name(lastName).getName();
+    this.location = new Location(location).getLocation();
 
-    this.gender = new Gender(_gender).getGender();
-    this.role = new Role(_role).getRole();
-    this.device = new DeviceFactory(_device).getDevice();
-    this.userStatus = new UserStatusFactory(_userStatus).getUserStatus();
-    this.dateOfBirth = new DateOfBirth(_dateOfBirth).getDateOfBirth();
+    this.gender = new Gender(gender).getGender();
+    this.role = new Role(role).getRole();
+    this.userStatus = new UserStatusFactory(userStatus).getUserStatus();
+    this.dateOfBirth = new DateFactory(dateOfBirth).getDate();
 
-    this.phoneNumber = new PhoneNumber(_phoneNumber).getPhoneNumber();
+    this.phoneNumber = new PhoneNumber(phoneNumber).getPhoneNumber();
 
-    if (_idNumber) this.idNumber = new IdNumber(_idNumber).getIdNumber();
+    if (idNumber) this.idNumber = new IdNumber(idNumber).getIdNumber();
 
     const passwordFactory = new PasswordFactory();
-    passwordFactory.setPassword(_password);
+    passwordFactory.setPassword(password);
     this.password = passwordFactory.getPassword();
   }
 
@@ -263,6 +255,7 @@ export default class UserFactory {
       phoneNumber: this.phoneNumber,
       idNumber: this.idNumber!,
       isActive: true,
+      isVerified: false,
     };
   }
 }

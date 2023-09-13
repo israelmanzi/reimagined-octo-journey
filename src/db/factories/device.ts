@@ -4,22 +4,26 @@ import { TDevice, TDeviceModel, TDeviceStatusType, TInsurance } from '../types';
 import { Name } from './user';
 
 export class DateFactory {
-  private readonly date: Date;
+  private readonly date: string;
 
-  constructor(_date: Date) {
-    this.date = _date;
+  constructor(_date: string) {
+    if (!Date.parse(_date)) {
+      throw new HttpsError('invalid-argument', 'Invalid date');
+    }
+
+    this.date = new Date(_date).toISOString();
   }
 
-  public getDate(): Date {
+  public getDate(): string {
     return this.date;
   }
 }
 
 export class Insurance {
   private readonly name: string;
-  private readonly expirationDate: Date;
+  private readonly expirationDate: string;
 
-  constructor(name: string, expirationDate: Date) {
+  constructor(name: string, expirationDate: string) {
     this.name = new Name(name).getName();
     this.expirationDate = new DateFactory(expirationDate).getDate();
   }
@@ -56,11 +60,11 @@ export class DeviceStatus {
 export class DeviceModel {
   private readonly name: string;
   private readonly manufacturer: string;
-  private readonly releaseDate: Date;
-  private readonly lastUpdate: Date;
+  private readonly releaseDate: string;
+  private readonly lastUpdate: string;
   private readonly price: number;
 
-  constructor(name: string, manufacturer: string, releaseDate: Date, lastUpdate: Date, price: number) {
+  constructor(name: string, manufacturer: string, releaseDate: string, lastUpdate: string, price: number) {
     this.name = new Name(name).getName();
     this.manufacturer = new Name(manufacturer).getName();
     this.releaseDate = new DateFactory(releaseDate).getDate();
@@ -86,7 +90,7 @@ export class DeviceModel {
 
 export class Device {
   private readonly id: string;
-  private readonly issuedAt: Date;
+  private readonly issuedAt: string;
   private readonly userId: string;
   private readonly insurance: TInsurance;
   private readonly deviceStatus: TDeviceStatusType;
@@ -94,11 +98,11 @@ export class Device {
   private readonly deviceModel: TDeviceModel;
 
   constructor(
-    _issuedAt: Date,
+    _issuedAt: string,
     _userId: string,
     _insurance: TInsurance,
     _deviceStatus: TDeviceStatusType,
-    _lastActive: Date,
+    _lastActive: string,
     _deviceModel: TDeviceModel,
   ) {
     this.id = v4();

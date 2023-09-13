@@ -107,7 +107,7 @@ export default class UserRepository implements UserRepositoryPort {
     const user = await users.findOne<TUser>({ email });
     await this.dbDisconnect();
 
-    if (!user) throw new HttpsError('not-found', 'User not found!');
+    if (!user) throw new HttpsError('not-found', 'Invalid email or password!');
 
     return user;
   }
