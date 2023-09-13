@@ -4,7 +4,7 @@ import { hash, genSalt } from 'bcrypt';
 import { TUser } from '../db/types';
 
 class EmailFactory {
-  private email: string;
+  private readonly email: string;
   regex: RegExp = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/;
 
   constructor(_email: string) {
