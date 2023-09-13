@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-import { compare } from 'bcrypt';
-import { PasswordFactory } from '../factories/user';
-import { v1 } from 'uuid';
+import {compare} from 'bcrypt';
+import {PasswordFactory} from '../db/factories/user';
+import {v1} from 'uuid';
 
 type EnvVars = {
   [key: string]: string;
@@ -45,9 +45,7 @@ export async function comparePasswordAndGenerateNewPassword(unhashed: string, ha
 
     const passwordFactory = new PasswordFactory();
     await passwordFactory.setPassword(unhashed);
-    const _password = passwordFactory.getPassword();
-
-    return _password;
+    return passwordFactory.getPassword();
   } catch (error: any) {
     throw new HttpsError('failed-precondition', error.message);
   }
@@ -67,8 +65,8 @@ export async function generateVerificationOrResetCode(): Promise<string> {
 }
 
 export class Response {
-  private code: SuccessCode;
-  private retBody: any;
+  private readonly code: SuccessCode;
+  private readonly retBody: any;
 
   constructor(
     public _code: SuccessCode,

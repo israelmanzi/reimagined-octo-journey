@@ -1,6 +1,6 @@
 import UserRepository, { UserRepositoryPort } from '../db/repositories/user.repository';
 import { TUser } from '../db/types';
-import UserFactory from '../factories/user';
+import UserFactory from '../db/factories/user';
 
 export default class UserService {
   private readonly userRepository: UserRepositoryPort;

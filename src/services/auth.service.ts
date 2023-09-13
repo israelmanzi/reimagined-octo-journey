@@ -1,7 +1,7 @@
-import { compare } from 'bcrypt';
+import {compare} from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import UserRepository from '../db/repositories/user.repository';
-import { ENV_VARS, HttpsError, generateVerificationOrResetCode } from '../utils';
+import {ENV_VARS, generateVerificationOrResetCode, HttpsError} from '../utils';
 
 type LoginRes = {
   accessToken: string;
@@ -60,12 +60,10 @@ export default class AuthService {
 
     if (!passwordCompare) throw new HttpsError('unauthenticated', 'Invalid password!');
 
-    const token = await this.generateAuthToken({
+    return await this.generateAuthToken({
       userId: user.id!,
       email: user.email,
     });
-
-    return token;
   }
 
   async refreshToken(userId: string, refreshToken: string): Promise<LoginRes> {
@@ -73,13 +71,11 @@ export default class AuthService {
 
     if (refreshToken !== ref.refreshToken) throw new HttpsError('unauthenticated', 'Invalid refresh token!');
 
-    const token = await this.generateAuthToken({
+    return await this.generateAuthToken({
       userId,
       email: ref.email,
       refreshToken: ref.refreshToken,
     });
-
-    return token;
   }
 
   async generateAccessToken(
@@ -93,11 +89,10 @@ export default class AuthService {
     refreshToken: string,
   ): Promise<string> {
     const body = { id, email };
-    const accessToken = jwt.sign({ body, refreshToken }, this.ACCESS_SECRET, {
+
+    return jwt.sign({body, refreshToken}, this.ACCESS_SECRET, {
       expiresIn: this.ACCESS_EXPIRES_IN,
     });
-
-    return accessToken;
   }
 
   async verifyAccessToken(token: string): Promise<any> {
