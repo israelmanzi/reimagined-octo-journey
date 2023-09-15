@@ -1,7 +1,27 @@
+import { Request, Response } from 'express';
+import { v1 } from 'uuid';
+import { compare } from 'bcrypt';
 import dotenv from 'dotenv';
-import {compare} from 'bcrypt';
-import {PasswordFactory} from '../db/factories/user';
-import {v1} from 'uuid';
+import winston from 'winston';
+import { PasswordFactory } from '../db/factories/user';
+
+export const logger = winston.createLogger({
+  levels: winston.config.syslog.levels,
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.cli(),
+    winston.format.colorize({ all: true }),
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+  ],
+  exceptionHandlers: [
+    new winston.transports.File({ filename: 'logs/exceptions.log' }),
+  ],
+  exitOnError: false,
+});
 
 type EnvVars = {
   [key: string]: string;
@@ -43,9 +63,7 @@ export async function comparePasswordAndGenerateNewPassword(unhashed: string, ha
   try {
     if (await compare(unhashed, hashed)) throw new HttpsError('invalid-argument', 'You cannot use the same password!');
 
-    const passwordFactory = new PasswordFactory();
-    await passwordFactory.setPassword(unhashed);
-    return passwordFactory.getPassword();
+    return new PasswordFactory(unhashed).getPassword();
   } catch (error: any) {
     throw new HttpsError('failed-precondition', error.message);
   }
@@ -53,18 +71,16 @@ export async function comparePasswordAndGenerateNewPassword(unhashed: string, ha
 
 export async function generateVerificationOrResetCode(): Promise<string> {
   try {
-    const code = v1({
+    return v1({
       nsecs: 163,
       node: [0x01, 0x23, 0x45, 0x67, 0x89, 0xab],
     });
-
-    return code;
   } catch (error: any) {
     throw new HttpsError('failed-precondition', error.message);
   }
 }
 
-export class Response {
+export class ResponseT {
   private readonly code: SuccessCode;
   private readonly retBody: any;
 
@@ -76,20 +92,28 @@ export class Response {
     this.retBody = _retBody;
   }
 
-  public sendResponse(): { status: number; body: any; message: string } {
+  public sendResponse(req: Request, res: Response) {
     switch (this.code) {
       case 'ok':
-        return { status: 200, body: this.retBody, message: 'OK' };
+        res.status(200).json(this.retBody);
+        break;
       case 'created':
-        return { status: 201, body: this.retBody, message: 'Created' };
+        res.status(201).json(this.retBody);
+        break;
       case 'accepted':
-        return { status: 202, body: this.retBody, message: 'Accepted' };
+        res.status(202).json(this.retBody);
+        break;
       case 'no-content':
-        return { status: 204, body: this.retBody, message: 'No Content' };
+        res.status(204).json(this.retBody);
+        break;
       case 'multi-status':
-        return { status: 207, body: this.retBody, message: 'Multi-Status' };
+        res.status(207).json(this.retBody);
+        break;
       case 'already-reported':
-        return { status: 208, body: this.retBody, message: 'Already Reported' };
+        res.status(208).json(this.retBody);
+        break;
+      default:
+        res.status(500).json(this.retBody);
     }
   }
 }

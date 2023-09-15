@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
-import { HttpsError } from '.';
+import { HttpsError, logger } from '.';
 
 export default (callback: (req: Request, res: Response) => Promise<void>) => async (req: Request, res: Response) => {
   try {
     await callback(req, res);
   } catch (error: unknown) {
     if (error instanceof HttpsError) {
-      console.log(error);
       switch (error.code) {
         case 'invalid-argument':
           res.status(400).json({
@@ -69,8 +68,9 @@ export default (callback: (req: Request, res: Response) => Promise<void>) => asy
           });
       }
     } else {
+      logger.error(error);
       res.status(500).json({
-        error: 'Oops! Something went wrong.' + error,
+        error: 'Oops! Something went wrong.',
       });
     }
   }

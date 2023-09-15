@@ -1,7 +1,9 @@
-import {compare} from 'bcrypt';
+import { compare } from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import UserRepository from '../db/repositories/user.repository';
-import {ENV_VARS, generateVerificationOrResetCode, HttpsError} from '../utils';
+import { comparePasswordAndGenerateNewPassword, ENV_VARS, generateVerificationOrResetCode, HttpsError } from '../utils';
+import { TUserRole } from '../db/types';
+import MailService from './mail.service';
 
 type LoginRes = {
   accessToken: string;
@@ -27,10 +29,12 @@ export default class AuthService {
   private async generateAuthToken({
     userId,
     email,
+    role,
     refreshToken,
   }: {
     userId: string;
     email: string;
+    role: TUserRole;
     refreshToken?: string;
   }): Promise<LoginRes> {
     if (!refreshToken) {
@@ -38,13 +42,14 @@ export default class AuthService {
         {
           userId,
           email,
+          role,
         },
         this.REFRESH_SECRET,
-        this.ACCESS_EXPIRES_IN,
+        this.ACCESS_EXPIRES_IN * 30,
       );
     }
 
-    const accessToken = await this.generateAccessToken({ id: userId, email }, refreshToken);
+    const accessToken = await this.generateAccessToken({ id: userId, email, role }, refreshToken);
 
     return {
       accessToken: accessToken,
@@ -63,17 +68,17 @@ export default class AuthService {
     return await this.generateAuthToken({
       userId: user.id!,
       email: user.email,
+      role: user.role,
     });
   }
 
-  async refreshToken(userId: string, refreshToken: string): Promise<LoginRes> {
-    const ref = await this.userRepository.findRefreshToken(refreshToken);
-
-    if (refreshToken !== ref.refreshToken) throw new HttpsError('unauthenticated', 'Invalid refresh token!');
+  async refreshToken(userId: string): Promise<LoginRes> {
+    const ref = await this.userRepository.findById(userId);
 
     return await this.generateAuthToken({
       userId,
       email: ref.email,
+      role: ref.role,
       refreshToken: ref.refreshToken,
     });
   }
@@ -82,15 +87,17 @@ export default class AuthService {
     {
       id,
       email,
+      role,
     }: {
       id: string;
       email: string;
+      role: TUserRole;
     },
     refreshToken: string,
   ): Promise<string> {
-    const body = { id, email };
+    const body = { id, email, role };
 
-    return jwt.sign({body, refreshToken}, this.ACCESS_SECRET, {
+    return jwt.sign({ body, refreshToken }, this.ACCESS_SECRET, {
       expiresIn: this.ACCESS_EXPIRES_IN,
     });
   }
@@ -99,8 +106,6 @@ export default class AuthService {
     const payload = jwt.verify(token, this.ACCESS_SECRET);
 
     if (!payload) throw new HttpsError('unauthenticated', 'Invalid token!');
-
-    console.log(payload);
 
     return payload;
   }
@@ -118,6 +123,7 @@ export default class AuthService {
 
   async generateVerificationCode(email: string): Promise<{
     callback: string;
+    method: string;
   }> {
     const user = await this.userRepository.findByEmail(email);
 
@@ -127,8 +133,20 @@ export default class AuthService {
 
     await this.userRepository.verificationToken(email, verificationCode);
 
+    const mailService = new MailService();
+
+    await mailService.sendMail({
+      to: email,
+      subject: 'Verify your account',
+      context: {
+        url: `${ENV_VARS.API_URL}/auth/verify-account?email=${email}&verificationCode=${verificationCode}`,
+        code: verificationCode,
+      },
+    });
+
     return {
-      callback: `${ENV_VARS.API_URL}/verify-account?email=${email}&verificationCode=${verificationCode}`,
+      callback: `${ENV_VARS.API_URL}/auth/verify-account?email=${email}&verificationCode=${verificationCode}`,
+      method: 'POST',
     };
   }
 
@@ -138,11 +156,16 @@ export default class AuthService {
     if (user.passwordResetToken !== passwordResetCode)
       throw new HttpsError('unauthenticated', 'Invalid password reset code!');
 
-    await this.userRepository.passwordReset(email, passwordResetCode, password);
+    await this.userRepository.passwordReset(
+      email,
+      passwordResetCode,
+      await comparePasswordAndGenerateNewPassword(password, user.password!),
+    );
   }
 
   async generatePasswordResetCode(email: string): Promise<{
     callback: string;
+    method: string;
   }> {
     await this.userRepository.findByEmail(email);
 
@@ -150,8 +173,20 @@ export default class AuthService {
 
     await this.userRepository.passwordResetToken(email, passwordResetCode);
 
+    const mailService = new MailService();
+
+    await mailService.sendMail({
+      to: email,
+      subject: 'Password reset',
+      context: {
+        url: `${ENV_VARS.API_URL}/auth/password-reset?email=${email}&passwordResetCode=${passwordResetCode}`,
+        code: passwordResetCode,
+      },
+    });
+
     return {
-      callback: `${ENV_VARS.API_URL}/password-reset?email=${email}&passwordResetCode=${passwordResetCode}`,
+      callback: `${ENV_VARS.API_URL}/auth/password-reset?email=${email}&passwordResetCode=${passwordResetCode}`,
+      method: 'POST',
     };
   }
 }

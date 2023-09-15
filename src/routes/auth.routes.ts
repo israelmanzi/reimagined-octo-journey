@@ -11,9 +11,9 @@ router
   .post('/register', errorHandler(AuthController.create))
   .post('/refresh-token/:userId', errorHandler(AuthController.refreshToken))
   .post('/verify-account', authMiddleware, errorHandler(AuthController.verifyAccount))
-  .post('/generate-verification-code', authMiddleware, errorHandler(AuthController.generateVerificationCode))
+  .get('/generate-verification-code', authMiddleware, errorHandler(AuthController.generateVerificationCode))
   .post('/password-reset', errorHandler(AuthController.passwordReset))
-  .post('/generate-reset-token', errorHandler(AuthController.generatePasswordResetCode))
+  .get('/generate-reset-code', errorHandler(AuthController.generatePasswordResetCode))
   .get('/me', authMiddleware, errorHandler(ProfileController.get))
   .put('/me/deactivate', authMiddleware, errorHandler(ProfileController.deactivate));
 

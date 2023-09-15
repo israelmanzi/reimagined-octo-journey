@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import AuthService from '../services/auth.service';
 import UserService from '../services/user.service';
-import { Response as R } from '../utils';
+import { HttpsError, ResponseT as R } from '../utils';
 import { TUser } from '../db/types';
 
 const authService: AuthService = new AuthService();
@@ -14,16 +14,15 @@ export const AuthController = {
 
     const token = await authService.login(email, password);
 
-    new R('ok', token).sendResponse();
+    new R('ok', token).sendResponse(req, res);
   },
 
   refreshToken: async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
     const { userId } = req.params;
 
-    const token = await authService.refreshToken(userId, refreshToken);
+    const token = await authService.refreshToken(userId);
 
-    new R('ok', token).sendResponse();
+    new R('ok', token).sendResponse(req, res);
   },
 
   create: async (req: Request, res: Response) => {
@@ -31,23 +30,29 @@ export const AuthController = {
 
     const user = await userService.create(body);
 
-    new R('created', user).sendResponse();
+    new R('created', user).sendResponse(req, res);
   },
 
   verifyAccount: async (req: Request, res: Response) => {
     const { email, verificationCode } = req.query;
 
+    if ((req as any).userPayload.body.email !== email) throw new HttpsError('unauthenticated', 'Unauthorized!');
+
     await authService.verifyAccount(`${email}`, `${verificationCode}`);
 
-    new R('ok', 'Account verified!').sendResponse();
+    new R('ok', {
+      message: 'Account verified!',
+    }).sendResponse(req, res);
   },
 
   generateVerificationCode: async (req: Request, res: Response) => {
     const { email } = req.query;
 
+    if ((req as any).userPayload.body.email !== email) throw new HttpsError('unauthenticated', 'Unauthorized!');
+
     const code = await authService.generateVerificationCode(`${email}`);
 
-    new R('created', code).sendResponse();
+    new R('created', code).sendResponse(req, res);
   },
 
   passwordReset: async (req: Request, res: Response) => {
@@ -56,7 +61,9 @@ export const AuthController = {
 
     await authService.passwordReset(`${email}`, `${passwordResetCode}`, password);
 
-    new R('ok', 'Password reset!').sendResponse();
+    new R('ok', {
+      message: 'Password reset!',
+    }).sendResponse(req, res);
   },
 
   generatePasswordResetCode: async (req: Request, res: Response) => {
@@ -64,6 +71,6 @@ export const AuthController = {
 
     const code = await authService.generatePasswordResetCode(`${email}`);
 
-    new R('accepted', code).sendResponse();
+    new R('accepted', code).sendResponse(req, res);
   },
 };

@@ -1,7 +1,7 @@
 import { v4 } from 'uuid';
+import { genSaltSync, hashSync } from 'bcrypt';
 import { HttpsError } from '../../utils';
-import { hash, genSalt } from 'bcrypt';
-import { TDevice, TGender, TUser, TUserRole, TUserStatus } from '../types';
+import { TDevice, TGender, TMetrics, TUser, TUserRole, TUserStatus, TUserStatusType } from '../types';
 import { DateFactory } from './device';
 
 class EmailFactory {
@@ -13,8 +13,8 @@ class EmailFactory {
       throw new HttpsError('invalid-argument', 'Invalid email');
     }
 
-    if (_email.length < 5 || _email.length > 20) {
-      throw new HttpsError('invalid-argument', 'Email must be between 5 and 20 characters');
+    if (_email.length < 5 || _email.length > 40) {
+      throw new HttpsError('invalid-argument', 'Email must be between 5 and 40 characters');
     }
 
     this.email = _email;
@@ -94,19 +94,16 @@ export class IdNumber {
 export class PasswordFactory {
   private password!: string;
 
-  constructor() {}
+  constructor(_password: string) {
+    if (_password.length < 6 || _password.length > 20) {
+      throw new HttpsError('invalid-argument', 'Password must be between 6 and 20 characters');
+    }
+
+    this.password = hashSync(_password, genSaltSync(11));
+  }
 
   public getPassword(): string {
     return this.password;
-  }
-
-  public async setPassword(_password: string): Promise<void> {
-    if (_password.length < 8 || _password.length > 20) {
-      throw new HttpsError('invalid-argument', 'Password must be between 8 and 20 characters');
-    }
-
-    const salt = await genSalt(10);
-    this.password = await hash(_password, salt);
   }
 }
 
@@ -135,14 +132,58 @@ export class DeviceFactory {
 }
 
 export class UserStatusFactory {
-  private readonly userStatus: TUserStatus[];
+  private readonly temperature: number;
+  private readonly heartRate: number;
+  private readonly bloodPressure: number;
+  private readonly metrics: TMetrics;
+  private readonly status: TUserStatusType;
+  private readonly issuedAt: string;
 
-  constructor(_userStatus: TUserStatus[]) {
-    this.userStatus = _userStatus;
+  constructor({
+    temperature,
+    heartRate,
+    bloodPressure,
+    metrics,
+    status,
+    issuedAt,
+  }: {
+    temperature: number;
+    heartRate: number;
+    bloodPressure: number;
+    metrics: TMetrics;
+    status: TUserStatusType;
+    issuedAt: string;
+  }) {
+    if (metrics.temperature == 'C' && (temperature < 0 || temperature > 100))
+      throw new HttpsError('invalid-argument', 'Temperature must be between 0 and 100 degrees');
+    if (metrics.temperature == 'F' && (temperature < 32 || temperature > 212))
+      throw new HttpsError('invalid-argument', 'Temperature must be between 32 and 212 degrees');
+    if (heartRate < 0 || heartRate > 200)
+      throw new HttpsError('invalid-argument', 'Heart rate must be between 0 and 200');
+    if (bloodPressure < 0 || bloodPressure > 200)
+      throw new HttpsError('invalid-argument', 'Blood pressure must be between 0 and 200');
+    if (status !== 'healthy' && status !== 'critical' && status !== 'sick')
+      throw new HttpsError('invalid-argument', 'Invalid status');
+
+    this.temperature = temperature;
+    this.heartRate = heartRate;
+    this.bloodPressure = bloodPressure;
+    this.metrics = metrics;
+    this.status = status;
+    this.issuedAt = new DateFactory(issuedAt).getDate();
   }
 
   public getUserStatus(): TUserStatus[] {
-    return this.userStatus;
+    return [
+      {
+        temperature: this.temperature,
+        heartRate: this.heartRate,
+        bloodPressure: this.bloodPressure,
+        metrics: this.metrics,
+        status: this.status,
+        issuedAt: this.issuedAt,
+      },
+    ];
   }
 }
 
@@ -227,16 +268,21 @@ export default class UserFactory {
 
     this.gender = new Gender(gender).getGender();
     this.role = new Role(role).getRole();
-    this.userStatus = new UserStatusFactory(userStatus).getUserStatus();
+    this.userStatus = new UserStatusFactory({
+      temperature: userStatus[0].temperature,
+      heartRate: userStatus[0].heartRate,
+      bloodPressure: userStatus[0].bloodPressure,
+      metrics: userStatus[0].metrics,
+      status: userStatus[0].status,
+      issuedAt: userStatus[0].issuedAt,
+    }).getUserStatus();
     this.dateOfBirth = new DateFactory(dateOfBirth).getDate();
 
     this.phoneNumber = new PhoneNumber(phoneNumber).getPhoneNumber();
 
     if (idNumber) this.idNumber = new IdNumber(idNumber).getIdNumber();
 
-    const passwordFactory = new PasswordFactory();
-    passwordFactory.setPassword(password);
-    this.password = passwordFactory.getPassword();
+    this.password = new PasswordFactory(password).getPassword();
   }
 
   public getUser(): TUser {

@@ -1,14 +1,15 @@
 import { ENV_VARS, HttpsError, comparePasswordAndGenerateNewPassword } from '../../utils';
-import { TUser } from '../types';
+import { TUser, TUserRole } from '../types';
 import { MongoClient } from 'mongodb';
 import jwt from 'jsonwebtoken';
+import UserFactory from '../factories/user';
 
 export interface UserRepositoryPort {
-  create(user: TUser): Promise<TUser>;
-  update(id: string, password: string): Promise<TUser>;
-  deactivate(id: string): Promise<TUser>;
-  findById(id: string): Promise<TUser>;
-  findByEmail(email: string): Promise<TUser>;
+  create(user: TUser): Promise<Omit<TUser, 'password'>>;
+  update(id: string, password: string): Promise<Omit<TUser, 'password'>>;
+  deactivate(id: string): Promise<void>;
+  findById(id: string): Promise<Omit<TUser, 'password'>>;
+  findByEmail(email: string): Promise<Omit<TUser, 'password'>>;
 }
 
 export default class UserRepository implements UserRepositoryPort {
@@ -51,18 +52,22 @@ export default class UserRepository implements UserRepositoryPort {
     }
   }
 
-  async create(user: TUser): Promise<TUser> {
+  async create(_user: TUser): Promise<Omit<TUser, 'password'>> {
     const { users } = await this.dbConnect();
 
-    if (await users.findOne({ email: user.email })) throw new HttpsError('already-exists', 'User already exists!');
+    if (await users.findOne({ email: _user.email })) throw new HttpsError('already-exists', 'User already exists!');
+
+    const user = new UserFactory(_user).getUser();
 
     await users.insertOne(user);
     await this.dbDisconnect();
 
-    return user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const userWithoutPassword = (({ password, ...rest }) => rest)(user);
+    return userWithoutPassword;
   }
 
-  async update(id: string, password: string): Promise<TUser> {
+  async update(id: string, password: string): Promise<Omit<TUser, 'password'>> {
     const { users } = await this.dbConnect();
 
     const user = await users.findOne<TUser>({ id });
@@ -74,23 +79,24 @@ export default class UserRepository implements UserRepositoryPort {
     await users.updateOne({ id }, { $set: { password } });
     await this.dbDisconnect();
 
-    return user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const userWithoutPassword = (({ password, ...rest }) => rest)(user);
+    return userWithoutPassword;
   }
 
-  async deactivate(id: string): Promise<TUser> {
+  async deactivate(id: string): Promise<void> {
     const { users } = await this.dbConnect();
 
     const user = await users.findOne<TUser>({ id });
 
     if (!user) throw new HttpsError('not-found', 'User not found!');
+    if (user.isActive) throw new HttpsError('invalid-argument', 'User already deactivated!');
 
-    await users.updateOne({ id }, { $set: { active: false } });
+    await users.updateOne({ id }, { $set: { active: true } });
     await this.dbDisconnect();
-
-    return user;
   }
 
-  async findById(id: string): Promise<TUser> {
+  async findById(id: string): Promise<Omit<TUser, 'password'>> {
     const { users } = await this.dbConnect();
 
     const user = await users.findOne<TUser>({ id });
@@ -98,7 +104,9 @@ export default class UserRepository implements UserRepositoryPort {
 
     if (!user) throw new HttpsError('not-found', 'User not found!');
 
-    return user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const userWithoutPassword = (({ password, ...rest }) => rest)(user);
+    return userWithoutPassword;
   }
 
   async findByEmail(email: string): Promise<TUser> {
@@ -112,39 +120,25 @@ export default class UserRepository implements UserRepositoryPort {
     return user;
   }
 
-  async findRefreshToken(id: string): Promise<{
-    refreshToken: string;
-    email: string;
-  }> {
-    const { users } = await this.dbConnect();
-
-    const user = await users.findOne<TUser>({ id });
-    await this.dbDisconnect();
-
-    if (!user || !user.refreshToken) throw new HttpsError('not-found', 'User or refreshToken not found!');
-
-    return {
-      refreshToken: user.refreshToken,
-      email: user.email,
-    };
-  }
-
   async generateRefreshToken(
     {
       userId,
       email,
+      role,
     }: {
       userId: string;
       email: string;
+      role: TUserRole;
     },
     REFRESH_SECRET: string,
     REFRESH_EXPIRES_IN: number,
   ): Promise<string> {
     const { users } = await this.dbConnect();
 
-    const refreshToken = jwt.sign({ userId, email }, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN });
+    const refreshToken = jwt.sign({ userId, email, role }, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN });
 
-    await users.updateOne({ userId }, { $set: { refreshToken } });
+    await users.updateOne({ id: userId }, { $set: { refreshToken } });
+
     await this.dbDisconnect();
 
     return refreshToken;
@@ -188,7 +182,7 @@ export default class UserRepository implements UserRepositoryPort {
         email,
         passwordResetToken: code,
       },
-      { $set: { password } },
+      { $set: { password, passwordResetToken: null } },
     );
     await this.dbDisconnect();
 

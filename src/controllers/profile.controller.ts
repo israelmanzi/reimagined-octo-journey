@@ -1,24 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response } from 'express';
 import UserService from '../services/user.service';
-import { Response as R } from '../utils';
+import { ResponseT as R } from '../utils';
 
 const userService: UserService = new UserService();
 
 export const ProfileController = {
   get: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const user = await userService.findById((req as any).userPayload.body.id!);
 
-    const user = await userService.findById(userId);
-
-    new R('ok', user).sendResponse();
+    new R('ok', user).sendResponse(req, res);
   },
 
   deactivate: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = (req as any).userPayload.body.id!;
 
     await userService.deactivate(userId);
 
-    new R('ok', 'User deactivated!').sendResponse();
+    new R('ok', {
+      message: 'User deactivated!',
+    }).sendResponse(req, res);
   },
 };
