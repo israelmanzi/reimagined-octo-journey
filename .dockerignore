@@ -1,0 +1,11 @@
+.idea/
+.vscode/
+logs/
+coverage/
+node_modules/
+build/
+dist/
+npm-debug.log
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
