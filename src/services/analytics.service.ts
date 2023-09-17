@@ -27,6 +27,7 @@ export default class AnalyticsService {
     const user = await this.userRepository.findById(device.userId);
 
     if (!user) throw new HttpsError('not-found', 'User not found!');
+    if (user.role !== 'user') throw new HttpsError('unauthenticated', 'You are not allowed to register a device!');
 
     return await this.deviceRepository.registerDevice(device);
   }
