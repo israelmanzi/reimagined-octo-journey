@@ -61,4 +61,8 @@ export default class AnalyticsService {
   async updateLastActive(id: string) {
     return await this.deviceRepository.updateLastActive(id);
   }
+
+  async getRegularUsers() {
+    return await this.userRepository.getRegularUsers();
+  }
 }

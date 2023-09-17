@@ -69,4 +69,10 @@ export const AnalyticsController = {
 
     new R('ok', devices).sendResponse(req, res);
   },
+
+  getRegularUsers: async (req: Request, res: Response) => {
+    const users = await analyticsService.getRegularUsers();
+
+    new R('ok', users).sendResponse(req, res);
+  },
 };

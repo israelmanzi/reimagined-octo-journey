@@ -268,4 +268,15 @@ export default class UserRepository implements IUserRepository {
     const userWithoutPassword = (({ password, ...rest }) => rest)(user);
     return userWithoutPassword;
   }
+
+  async getRegularUsers(): Promise<TUser[]> {
+    const { users } = await this.dbConnect();
+
+    const usersList = await users.find<TUser>({ role: 'user' }).toArray();
+    await this.dbDisconnect();
+
+    if (!usersList) throw new HttpsError('not-found', 'Users not found!');
+
+    return usersList;
+  }
 }
