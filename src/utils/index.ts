@@ -2,26 +2,7 @@ import { Request, Response } from 'express';
 import { v1 } from 'uuid';
 import { compare } from 'bcrypt';
 import dotenv from 'dotenv';
-import winston from 'winston';
 import { PasswordFactory } from '../db/factories/user';
-
-export const logger = winston.createLogger({
-  levels: winston.config.syslog.levels,
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.cli(),
-    winston.format.colorize({ all: true }),
-  ),
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-  ],
-  exceptionHandlers: [
-    new winston.transports.File({ filename: 'logs/exceptions.log' }),
-  ],
-  exitOnError: false,
-});
 
 type EnvVars = {
   [key: string]: string;

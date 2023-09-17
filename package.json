@@ -31,7 +31,6 @@
     "@types/cors": "2.8.13",
     "@types/express": "4.17.17",
     "@types/jsonwebtoken": "^9.0.2",
-    "@types/node": "20.5.9",
     "@types/nodemailer": "^6.4.10",
     "@types/nodemailer-express-handlebars": "^4.0.2",
     "@types/uuid": "9.0.3",
@@ -50,11 +49,9 @@
     "express": "4.18.2",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "6.0.0",
-    "node": "20.5.1",
     "nodemailer": "^6.9.5",
     "nodemailer-express-handlebars": "^6.1.0",
     "saslprep": "1.0.3",
-    "uuid": "9.0.0",
-    "winston": "^3.10.0"
+    "uuid": "9.0.0"
   }
 }

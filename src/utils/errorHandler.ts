@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { HttpsError, logger } from '.';
+import { HttpsError } from './index';
 
 export default (callback: (req: Request, res: Response) => Promise<void>) => async (req: Request, res: Response) => {
   try {
@@ -68,7 +68,7 @@ export default (callback: (req: Request, res: Response) => Promise<void>) => asy
           });
       }
     } else {
-      logger.error(error);
+      console.error(error);
       res.status(500).json({
         error: 'Oops! Something went wrong.',
       });

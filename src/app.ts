@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import routes from './routes';
 
@@ -12,6 +12,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-app.use('/api', routes);
+app.use('/api', routes).get('/', (req: Request, res: Response) =>
+  res.json({
+    message: 'MyVital API!',
+  }),
+);
 
 export default app;

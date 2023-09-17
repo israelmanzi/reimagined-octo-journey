@@ -1,21 +1,14 @@
 version: '3'
 services:
   api:
-    build: ./
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
-    volumes:
-      - ./src:/app/src
-      - /app/node_modules
-      - ./package.json:/app/package.json
     env_file:
       - .env
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      DB_URI: ${DB_URI}
-      API_URL: ${API_URL}
-      ACCESS_EXPIRES_IN: ${ACCESS_EXPIRES_IN}
-      ACCESS_SECRET: ${ACCESS_SECRET}
-      REFRESH_SECRET: ${REFRESH_SECRET}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_USERNAME: ${MAIL_USERNAME}
+    tty: true
+    stdin_open: true
+    volumes:
+      - .:/app
