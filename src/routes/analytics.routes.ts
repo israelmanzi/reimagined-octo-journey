@@ -8,7 +8,7 @@ const router = Router();
 
 router
   .post('/upload-data', [authMiddleware], errorHandler(ProfileController.updateWithCurrentStatus))
-  .post('/register-device', [authMiddleware], errorHandler(AnalyticsController.registerDevice))
+  .post('/register-device', [adminMiddleware], errorHandler(AnalyticsController.registerDevice))
   .get('/devices', [adminMiddleware], errorHandler(AnalyticsController.getAllDevices))
   .get('/devices/:id', [adminMiddleware], errorHandler(AnalyticsController.getDeviceById))
   .put('/devices/:id', [adminMiddleware], errorHandler(AnalyticsController.updateDevice))

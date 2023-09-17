@@ -22,10 +22,6 @@ export const AnalyticsController = {
 
   registerDevice: async (req: Request, res: Response) => {
     const body = req.body as TDevice;
-    const userIdFromPayload = (req as any).userPayload.body.id;
-
-    if (body.userId !== userIdFromPayload)
-      throw new HttpsError('unauthenticated', 'You are not allowed to register this device!');
 
     const device = await analyticsService.createDevice(body);
 
