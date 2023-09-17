@@ -6,7 +6,7 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 const router = Router();
 
 router
-  .get('/faq/', errorHandler(FAQController.getAllFAQs))
+  .get('/get-all', errorHandler(FAQController.getAllFAQs))
   .get('/faq/:id', errorHandler(FAQController.getFAQById))
   .post('/faq/', authMiddleware, errorHandler(FAQController.createFAQ))
   .put('/faq/:id', authMiddleware, errorHandler(FAQController.updateFAQ))
