@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import AuthService from '../services/auth.service';
+import UserService from '../services/user.service';
 
 const authService: AuthService = new AuthService();
+const userService: UserService = new UserService();
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -17,6 +19,14 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     (req as any).userPayload = payload;
 
+    const user = await userService.findById(payload.body.id);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        message: 'Unauthorized! User might be inactive!',
+      });
+    }
+
     next();
   } catch (error: any) {
     return res.status(401).json({
@@ -30,7 +40,7 @@ export const superAdminMiddleware = async (req: Request, res: Response, next: Ne
     try {
       const userPayload = (req as any).userPayload;
 
-      if (userPayload.role !== 'super-admin') {
+      if (userPayload.body.role !== 'super-admin') {
         return res.status(401).json({
           message: 'Unauthorized! Only super-admins can access this route!',
         });
@@ -53,7 +63,7 @@ export const adminMiddleware = async (req: Request, res: Response, next: NextFun
   try {
     const userPayload = (req as any).userPayload;
 
-    if (userPayload.role !== 'admin' || userPayload.role !== 'super-admin') {
+    if (userPayload.body.role !== 'admin' || userPayload.body.role !== 'super-admin') {
       return res.status(401).json({
         message: 'Unauthorized! Only admins can access this route!',
       });

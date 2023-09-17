@@ -1,6 +1,6 @@
 import { v4 } from 'uuid';
 import { HttpsError } from '../../utils';
-import { TDevice, TDeviceModel, TDeviceStatusType, TInsurance } from '../types';
+import { PassCode, TDevice, TDeviceModel, TDeviceStatusType, TInsurance } from '../types';
 import { Name } from './user';
 
 export class DateFactory {
@@ -11,7 +11,7 @@ export class DateFactory {
       throw new HttpsError('invalid-argument', 'Invalid date');
     }
 
-    this.date = new Date(_date).toISOString();
+    this.date = new Date(_date).toLocaleString();
   }
 
   public getDate(): string {
@@ -40,12 +40,7 @@ export class DeviceStatus {
   private readonly deviceStatus: TDeviceStatusType;
 
   constructor(_deviceStatus: TDeviceStatusType) {
-    if (
-      _deviceStatus !== 'active' &&
-      _deviceStatus !== 'inactive' &&
-      _deviceStatus !== 'lost' &&
-      _deviceStatus !== 'stolen'
-    ) {
+    if (!['active', 'inactive', 'lost', 'stolen'].includes(_deviceStatus.toLowerCase())) {
       throw new HttpsError('invalid-argument', 'Invalid device status');
     }
 
@@ -54,6 +49,22 @@ export class DeviceStatus {
 
   public getDeviceStatus(): TDeviceStatusType {
     return this.deviceStatus;
+  }
+}
+
+export class PassCodeFactory {
+  private readonly passCode: PassCode<1000, 9999, number>;
+
+  constructor(passCode: PassCode<1000, 9999, number>) {
+    if (passCode < 1000 || passCode > 9999 || !Number.isInteger(passCode)) {
+      throw new HttpsError('invalid-argument', 'Invalid pass code');
+    }
+
+    this.passCode = passCode;
+  }
+
+  public getPassCode(): PassCode<1000, 9999, number> {
+    return this.passCode;
   }
 }
 
@@ -88,36 +99,47 @@ export class DeviceModel {
   }
 }
 
-export class Device {
+export class DeviceFactory {
   private readonly id: string;
   private readonly issuedAt: string;
   private readonly userId: string;
   private readonly insurance: TInsurance;
   private readonly deviceStatus: TDeviceStatusType;
-  private readonly lastActive: DateFactory;
+  private readonly lastActive: string;
   private readonly deviceModel: TDeviceModel;
+  private readonly passCode: PassCode<1000, 9999, number>;
 
-  constructor(
-    _issuedAt: string,
-    _userId: string,
-    _insurance: TInsurance,
-    _deviceStatus: TDeviceStatusType,
-    _lastActive: string,
-    _deviceModel: TDeviceModel,
-  ) {
+  constructor({
+    issuedAt,
+    userId,
+    insurance,
+    deviceStatus,
+    lastActive,
+    deviceModel,
+    passCode,
+  }: {
+    issuedAt: string;
+    userId: string;
+    insurance: TInsurance;
+    deviceStatus: TDeviceStatusType;
+    lastActive: string;
+    deviceModel: TDeviceModel;
+    passCode: PassCode<1000, 9999, number>;
+  }) {
     this.id = v4();
-    this.issuedAt = new DateFactory(_issuedAt).getDate();
-    this.userId = _userId;
-    this.insurance = new Insurance(_insurance.name, _insurance.expirationDate).getInsurance();
-    this.deviceStatus = new DeviceStatus(_deviceStatus).getDeviceStatus();
-    this.lastActive = new DateFactory(_lastActive);
+    this.issuedAt = new DateFactory(issuedAt).getDate();
+    this.userId = userId;
+    this.insurance = new Insurance(insurance.name, insurance.expirationDate).getInsurance();
+    this.deviceStatus = new DeviceStatus(deviceStatus).getDeviceStatus();
+    this.lastActive = new DateFactory(lastActive).getDate();
     this.deviceModel = new DeviceModel(
-      _deviceModel.name,
-      _deviceModel.manufacturer,
-      _deviceModel.releaseDate,
-      _deviceModel.lastUpdate,
-      _deviceModel.price,
+      deviceModel.name,
+      deviceModel.manufacturer,
+      deviceModel.releaseDate,
+      deviceModel.lastUpdate,
+      deviceModel.price,
     ).getDeviceModel();
+    this.passCode = new PassCodeFactory(passCode).getPassCode();
   }
 
   public getDevice(): TDevice {
@@ -127,8 +149,9 @@ export class Device {
       userId: this.userId,
       insurance: this.insurance,
       deviceStatus: this.deviceStatus,
-      lastActive: this.lastActive.getDate(),
+      lastActive: this.lastActive,
       deviceModel: this.deviceModel,
+      passCode: this.passCode,
     };
   }
 }

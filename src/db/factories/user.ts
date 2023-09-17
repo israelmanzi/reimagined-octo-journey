@@ -29,8 +29,8 @@ export class Name {
   private readonly name: string;
 
   constructor(_name: string) {
-    if (_name.length < 2 || _name.length > 20) {
-      throw new HttpsError('invalid-argument', 'Name must be between 2 and 20 characters');
+    if (_name.length < 2 || _name.length > 50) {
+      throw new HttpsError('invalid-argument', 'Name must be between 2 and 50 characters');
     }
 
     this.name = _name;
@@ -116,18 +116,6 @@ export class RoleFactory {
 
   public getRole(): TUserRole {
     return this.role;
-  }
-}
-
-export class DeviceFactory {
-  private readonly device: TDevice;
-
-  constructor(_device: TDevice) {
-    this.device = _device;
-  }
-
-  public getDevice(): TDevice {
-    return this.device;
   }
 }
 

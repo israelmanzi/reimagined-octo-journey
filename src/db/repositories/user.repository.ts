@@ -1,18 +1,39 @@
 import { ENV_VARS, HttpsError, comparePasswordAndGenerateNewPassword } from '../../utils';
-import { TUser, TUserRole } from '../types';
+import { TUser, TUserRole, TUserStatus, TUserWithPassword } from '../types';
 import { MongoClient } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import UserFactory from '../factories/user';
+import AnalyticsService from '../../services/analytics.service';
 
-export interface UserRepositoryPort {
-  create(user: TUser): Promise<Omit<TUser, 'password'>>;
-  update(id: string, password: string): Promise<Omit<TUser, 'password'>>;
+export interface IUserRepository {
+  create(user: TUser): Promise<TUserWithPassword>;
+  update(id: string, password: string): Promise<TUserWithPassword>;
   deactivate(id: string): Promise<void>;
-  findById(id: string): Promise<Omit<TUser, 'password'>>;
-  findByEmail(email: string): Promise<Omit<TUser, 'password'>>;
+  findById(id: string): Promise<TUserWithPassword>;
+  findByEmail(email: string): Promise<TUserWithPassword>;
+  generateRefreshToken(
+    {
+      userId,
+      email,
+      role,
+    }: {
+      userId: string;
+      email: string;
+      role: TUserRole;
+    },
+    REFRESH_SECRET: string,
+    REFRESH_EXPIRES_IN: number,
+  ): Promise<string>;
+  verifyAccount(email: string): Promise<void>;
+  verificationToken(email: string, code: string): Promise<void>;
+  passwordReset(email: string, code: string, password: string): Promise<void>;
+  passwordResetToken(email: string, code: string): Promise<void>;
+  getActiveUsers(): Promise<TUser[]>;
+  getInactiveUsers(): Promise<TUser[]>;
+  updateUserWithCurrentStatus(id: string, status: TUserStatus[]): Promise<TUserWithPassword>;
 }
 
-export default class UserRepository implements UserRepositoryPort {
+export default class UserRepository implements IUserRepository {
   private readonly db: string;
   private readonly client: MongoClient;
   private static instance: UserRepository;
@@ -52,7 +73,7 @@ export default class UserRepository implements UserRepositoryPort {
     }
   }
 
-  async create(_user: TUser): Promise<Omit<TUser, 'password'>> {
+  async create(_user: TUser): Promise<TUserWithPassword> {
     const { users } = await this.dbConnect();
 
     if (await users.findOne({ email: _user.email })) throw new HttpsError('already-exists', 'User already exists!');
@@ -67,7 +88,7 @@ export default class UserRepository implements UserRepositoryPort {
     return userWithoutPassword;
   }
 
-  async update(id: string, password: string): Promise<Omit<TUser, 'password'>> {
+  async update(id: string, password: string): Promise<TUserWithPassword> {
     const { users } = await this.dbConnect();
 
     const user = await users.findOne<TUser>({ id });
@@ -90,13 +111,13 @@ export default class UserRepository implements UserRepositoryPort {
     const user = await users.findOne<TUser>({ id });
 
     if (!user) throw new HttpsError('not-found', 'User not found!');
-    if (user.isActive) throw new HttpsError('invalid-argument', 'User already deactivated!');
+    if (!user.isActive) throw new HttpsError('invalid-argument', 'User already deactivated!');
 
     await users.updateOne({ id }, { $set: { active: true } });
     await this.dbDisconnect();
   }
 
-  async findById(id: string): Promise<Omit<TUser, 'password'>> {
+  async findById(id: string): Promise<TUserWithPassword> {
     const { users } = await this.dbConnect();
 
     const user = await users.findOne<TUser>({ id });
@@ -201,5 +222,50 @@ export default class UserRepository implements UserRepositoryPort {
     await this.dbDisconnect();
 
     if (!res) throw new HttpsError('not-found', 'User not found!');
+  }
+
+  async getActiveUsers(): Promise<TUser[]> {
+    const { users } = await this.dbConnect();
+
+    const usersList = await users.find<TUser>({ isActive: true }).toArray();
+    await this.dbDisconnect();
+
+    return usersList;
+  }
+
+  async getInactiveUsers(): Promise<TUser[]> {
+    const { users } = await this.dbConnect();
+
+    const usersList = await users.find<TUser>({ isActive: false }).toArray();
+    await this.dbDisconnect();
+
+    return usersList;
+  }
+
+  async updateUserWithCurrentStatus(id: string, status: TUserStatus[]): Promise<TUserWithPassword> {
+    const { users } = await this.dbConnect();
+
+    const user = await users.findOne<TUser>({ id });
+
+    if (!user) throw new HttpsError('not-found', 'User not found!');
+
+    const res = await users.updateOne(
+      { id },
+      {
+        $push: {
+          userStatus: { $each: status, $position: 0 },
+        },
+      },
+    );
+    await this.dbDisconnect();
+
+    if (!res) throw new HttpsError('not-found', 'User not found!');
+
+    const analyticsService = new AnalyticsService();
+    await analyticsService.updateLastActive(user.device!.id!);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const userWithoutPassword = (({ password, ...rest }) => rest)(user);
+    return userWithoutPassword;
   }
 }

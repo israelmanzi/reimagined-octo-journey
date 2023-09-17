@@ -27,6 +27,7 @@ export type TDevice = {
   deviceStatus: TDeviceStatusType;
   lastActive: string;
   deviceModel: TDeviceModel;
+  passCode: PassCode<1000, 9999, number>;
 };
 
 export type TInsurance = {
@@ -61,8 +62,17 @@ export type TDeviceModel = {
   price: number;
 };
 
-export type FAQ = {
+export type PassCode<Min extends number, Max extends number, Value extends number> = Value extends Min
+  ? Min
+  : Value extends Max
+  ? Max
+  : Value;
+
+export type TFAQ = {
   id?: string;
   question: string;
   answer: string;
+  category: string;
 };
+
+export type TUserWithPassword = Omit<TUser, 'password'>;
