@@ -30,7 +30,7 @@ export interface IUserRepository {
   passwordResetToken(email: string, code: string): Promise<void>;
   getActiveUsers(): Promise<TUser[]>;
   getInactiveUsers(): Promise<TUser[]>;
-  updateUserWithCurrentStatus(id: string, status: TUserStatus[]): Promise<TUserWithPassword>;
+  updateUserWithCurrentStatus(tagId: string, status: TUserStatus[]): Promise<TUserWithPassword>;
 }
 
 export default class UserRepository implements IUserRepository {
@@ -242,15 +242,15 @@ export default class UserRepository implements IUserRepository {
     return usersList;
   }
 
-  async updateUserWithCurrentStatus(id: string, status: TUserStatus[]): Promise<TUserWithPassword> {
+  async updateUserWithCurrentStatus(tagId: string, status: TUserStatus[]): Promise<TUserWithPassword> {
     const { users } = await this.dbConnect();
 
-    const user = await users.findOne<TUser>({ id });
+    const user = await users.findOne<TUser>({ tagId });
 
     if (!user) throw new HttpsError('not-found', 'User not found!');
 
     const res = await users.updateOne(
-      { id },
+      { id: user.id },
       {
         $push: {
           userStatus: { $each: status, $position: 0 },

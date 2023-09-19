@@ -24,7 +24,7 @@ export default class UserService {
     return await this.userRepository.findById(id);
   }
 
-  async updateUserWithCurrentStatus(id: string, status: TUserStatus[]): Promise<TUserWithPassword> {
-    return await this.userRepository.updateUserWithCurrentStatus(id, status);
+  async updateUserWithCurrentStatus(tagId: string, status: TUserStatus[]): Promise<TUserWithPassword> {
+    return await this.userRepository.updateUserWithCurrentStatus(tagId, status);
   }
 }

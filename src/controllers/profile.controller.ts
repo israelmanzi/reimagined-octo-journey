@@ -25,11 +25,11 @@ export const ProfileController = {
   },
 
   updateWithCurrentStatus: async (req: Request, res: Response) => {
-    const userId = (req as any).userPayload.body.id!;
+    const tagId = req.body.tagId;
 
     const userStatus = new UserStatusFactory(req.body.userStatus as TUserStatus).getUserStatus();
 
-    const user = await userService.updateUserWithCurrentStatus(userId, userStatus);
+    const user = await userService.updateUserWithCurrentStatus(tagId, userStatus);
 
     new R('ok', user).sendResponse(req, res);
   },

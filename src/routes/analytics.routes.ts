@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { AnalyticsController } from '../controllers/analytics.controller';
 import errorHandler from '../utils/errorHandler';
-import { adminMiddleware, authMiddleware } from '../middlewares/auth.middleware';
+import { adminMiddleware } from '../middlewares/auth.middleware';
 import { ProfileController } from '../controllers/profile.controller';
 
 const router = Router();
 
 router
-  .post('/upload-data', [authMiddleware], errorHandler(ProfileController.updateWithCurrentStatus))
+  .post('/upload-data', errorHandler(ProfileController.updateWithCurrentStatus))
   .get('/get-regular-users', [adminMiddleware], errorHandler(AnalyticsController.getRegularUsers))
   .post('/register-device', [adminMiddleware], errorHandler(AnalyticsController.registerDevice))
   .get('/devices', [adminMiddleware], errorHandler(AnalyticsController.getAllDevices))
